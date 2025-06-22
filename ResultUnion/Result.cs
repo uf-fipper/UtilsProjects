@@ -44,8 +44,6 @@ public abstract partial record Result<T, E>
         };
     }
 
-    public T UnwrapOr(Func<E, T> func) => UnwrapOrElse(func);
-
     public T? UnwrapOrDefault()
     {
         return this switch
@@ -74,8 +72,6 @@ public abstract partial record Result<T, E>
             _ => throw new NotSupportedException("Not supported"),
         };
     }
-
-    public Result<U, E> And<U>(Func<T, Result<U, E>> func) => AndThen(func);
 
     public Result<U, E> AndThen<U>(Func<T, Result<U, E>> func)
     {
@@ -119,8 +115,6 @@ public abstract partial record Result<T, E>
         };
     }
 
-    public Result<T, U> Or<U>(Func<E, Result<T, U>> func) => OrElse(func);
-
     public Result<T, U> OrElse<U>(Func<E, Result<T, U>> func)
     {
         return this switch
@@ -155,10 +149,6 @@ public abstract partial record Result<T, E>
             _ => throw new NotSupportedException("Not supported"),
         };
     }
-
-    public U Map<U>(U @default, Func<T, U> func) => MapOr(@default, func);
-
-    public U Map<U>(Func<E, U> fe, Func<T, U> ft) => MapOrElse(fe, ft);
 
     public U MapOr<U>(U @default, Func<T, U> func)
     {
@@ -203,27 +193,4 @@ public static class Result
 
     public static Result<object, TError> Err<TError>(TError error) =>
         new Result<object, TError>.Err(error);
-
-    public static Result<T, E> CatchRun<T, E>(Func<T> func)
-        where E : Exception
-    {
-        try
-        {
-            return Ok<T, E>(func());
-        }
-        catch (E e)
-        {
-            return Err<T, E>(e);
-        }
-    }
-
-    public static Result<T, Exception> CatchRun<T>(Func<T> func) => CatchRun<T, Exception>(func);
-
-    public static T ThrowIfException<T, E>(this Result<T, E> result)
-        where E : Exception
-    {
-        if (result.IsErr())
-            throw result.UnwrapErr();
-        return result.Unwrap();
-    }
 }
