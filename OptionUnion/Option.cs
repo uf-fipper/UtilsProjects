@@ -1,10 +1,20 @@
 namespace OptionUnion;
 
-public abstract partial record Option<T> : IOption<T>
+public readonly partial record struct Option<T> : IOption<T>
 {
-    private Option() { }
+    internal readonly object Inner = None.Instance;
 
-    internal sealed record Some(T Data) : Option<T>
+    internal Option(Some inner)
+    {
+        Inner = inner;
+    }
+
+    internal Option(None inner)
+    {
+        Inner = inner;
+    }
+
+    internal readonly record struct Some(T Data)
     {
         public override string ToString()
         {
@@ -12,7 +22,7 @@ public abstract partial record Option<T> : IOption<T>
         }
     }
 
-    internal sealed record None : Option<T>
+    internal readonly record struct None
     {
         public static readonly None Instance = new();
 
@@ -21,25 +31,27 @@ public abstract partial record Option<T> : IOption<T>
             return "None";
         }
     }
+
+    public override string ToString() => Inner.ToString()!;
 }
 
-public partial record Option<T>
+public partial record struct Option<T>
 {
-    public bool IsSome() => this is Some;
+    public bool IsSome() => Inner is Some;
 
-    internal Some AsSome() => (Some)this;
+    internal Some AsSome() => (Some)Inner;
 
-    public bool IsNone() => this is None;
+    public bool IsNone() => Inner is None;
 
-    internal None AsNone() => (None)this;
+    internal None AsNone() => (None)Inner;
 
-    public bool IsSomeAnd(Func<T, bool> func) => this is Some some && func(some.Data);
+    public bool IsSomeAnd(Func<T, bool> func) => Inner is Some some && func(some.Data);
 
     public T Unwrap() => AsSome().Data;
 
     public T UnwrapOr(T @default)
     {
-        return this switch
+        return Inner switch
         {
             Some some => some.Data,
             _ => @default,
@@ -48,7 +60,7 @@ public partial record Option<T>
 
     public T? UnwrapOrDefault()
     {
-        return this switch
+        return Inner switch
         {
             Some some => some.Data,
             _ => default,
@@ -57,7 +69,7 @@ public partial record Option<T>
 
     public T UnwrapOrElse(Func<T> func)
     {
-        return this switch
+        return Inner switch
         {
             Some some => some.Data,
             _ => func(),
@@ -66,7 +78,7 @@ public partial record Option<T>
 
     public Option<U> And<U>(Option<U> x)
     {
-        return this switch
+        return Inner switch
         {
             Some => x,
             _ => Option.None<U>(),
@@ -75,7 +87,7 @@ public partial record Option<T>
 
     public Option<U> AndThen<U>(Func<T, Option<U>> func)
     {
-        return this is Some some ? func(some.Data) : Option.None<U>();
+        return Inner is Some some ? func(some.Data) : Option.None<U>();
     }
 
     public bool IsNoneOr(Func<T, bool> func)
@@ -95,7 +107,7 @@ public partial record Option<T>
 
     public Option<U> Map<U>(Func<T, U> func)
     {
-        return this switch
+        return Inner switch
         {
             Some some => Option.Some(func(some.Data)),
             _ => Option.None<U>(),
@@ -104,7 +116,7 @@ public partial record Option<T>
 
     public U MapOr<U>(U @default, Func<T, U> func)
     {
-        return this switch
+        return Inner switch
         {
             Some some => func(some.Data),
             _ => @default,
@@ -113,7 +125,7 @@ public partial record Option<T>
 
     public U MapOrElse<U>(Func<U> fe, Func<T, U> ft)
     {
-        return this switch
+        return Inner switch
         {
             Some some => ft(some.Data),
             _ => fe(),
@@ -122,24 +134,43 @@ public partial record Option<T>
 
     public Option<T> Inspect(Action<T> func)
     {
-        if (this is Some some)
+        if (Inner is Some some)
             func(some.Data);
         return this;
     }
 
     public T Expect(string message)
     {
-        if (this is Some some)
+        if (Inner is Some some)
             return some.Data;
         throw new InvalidOperationException(message);
+    }
+
+    public Option<T> Filter(Func<T, bool> predicate)
+    {
+        return Inner switch
+        {
+            Some some when predicate(some.Data) => this,
+            _ => Option.None<T>(),
+        };
+    }
+
+    public Option<T> Xor(Option<T> other)
+    {
+        return (IsSome(), other.IsSome()) switch
+        {
+            (true, false) => this,
+            (false, true) => other,
+            _ => Option.None<T>(),
+        };
     }
 }
 
 public static class Option
 {
-    public static Option<T> Some<T>(T data) => new Option<T>.Some(data);
+    public static Option<T> Some<T>(T data) => new(new Option<T>.Some(data));
 
-    public static Option<T> None<T>() => Option<T>.None.Instance;
+    public static Option<T> None<T>() => new(Option<T>.None.Instance);
 
-    public static Option<object> None() => Option<object>.None.Instance;
+    public static Option<object> None() => new(Option<object>.None.Instance);
 }

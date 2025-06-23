@@ -192,4 +192,39 @@ public class OptionTest1
         Assert.AreEqual(100, SomeInt.Expect("Should not throw"));
         Assert.ThrowsException<InvalidOperationException>(() => NoneInt.Expect("Should throw"));
     }
+
+    [TestMethod]
+    public void TestFilter()
+    {
+        var filteredSome = SomeInt.Filter(x => x > 50);
+        Assert.IsTrue(filteredSome.IsSome());
+        Assert.AreEqual(100, filteredSome.Unwrap());
+
+        var filteredNone = SomeInt.Filter(x => x < 50);
+        Assert.IsTrue(filteredNone.IsNone());
+
+        var filteredNone2 = NoneInt.Filter(x => x > 50);
+        Assert.IsTrue(filteredNone2.IsNone());
+    }
+
+    [TestMethod]
+    public void TestXor()
+    {
+        var someOption = Some(200);
+        var noneOption = None<int>();
+
+        var xorSome = SomeInt.Xor(someOption);
+        Assert.IsTrue(xorSome.IsNone());
+
+        var xorNone = SomeInt.Xor(noneOption);
+        Assert.IsTrue(xorNone.IsSome());
+        Assert.AreEqual(100, xorNone.Unwrap());
+
+        var xorNone2 = NoneInt.Xor(someOption);
+        Assert.IsTrue(xorNone2.IsSome());
+        Assert.AreEqual(200, xorNone2.Unwrap());
+
+        var xorBothNone = NoneInt.Xor(noneOption);
+        Assert.IsTrue(xorBothNone.IsNone());
+    }
 }

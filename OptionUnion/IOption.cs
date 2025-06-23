@@ -7,7 +7,7 @@ public interface IOption
     public bool IsNone();
 }
 
-public interface IOption<T>
+public interface IOption<T> : IOption
 {
     public bool IsSomeAnd(Func<T, bool> func);
 
@@ -38,15 +38,8 @@ public interface IOption<T>
     public Option<T> Inspect(Action<T> func);
 
     public T Expect(string message);
+
+    public Option<T> Filter(Func<T, bool> predicate);
+
+    public Option<T> Xor(Option<T> other);
 }
-
-public interface ISome : IOption;
-
-public interface ISome<T> : IOption<T>, ISome
-{
-    public T Data { get; }
-}
-
-public interface INone : IOption;
-
-public interface INone<T> : IOption<T>, INone;
